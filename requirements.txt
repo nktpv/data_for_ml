@@ -1,0 +1,24 @@
+# Core
+pandas>=2.0
+pyarrow>=14.0
+pyyaml>=6.0
+
+# HuggingFace
+datasets>=2.18
+huggingface-hub>=0.21
+
+# Kaggle (optional — set KAGGLE_USERNAME + KAGGLE_KEY in .env)
+kaggle>=1.6
+
+# Web scraping
+requests>=2.31
+beautifulsoup4>=4.12
+
+# RSS
+feedparser>=6.0
+
+# EDA
+matplotlib>=3.8
+
+# Dev
+python-dotenv>=1.0

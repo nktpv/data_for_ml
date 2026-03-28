@@ -1,0 +1,13 @@
+task:
+  type: "sentiment analysis"
+  language: "en"
+
+general:
+  max_samples_per_source: 5000
+  validation_sample_size: 10
+
+sources:
+  huggingface: true
+  kaggle: true       # requires KAGGLE_USERNAME + KAGGLE_KEY in .env
+  scraping: true
+  rss: true
