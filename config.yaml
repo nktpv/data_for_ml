@@ -1,6 +1,7 @@
 task:
   type: "sentiment analysis"
-  language: "en"
+  topic: "text sentiment / tone detection"
+  language: "ru+en"
 
 general:
   max_samples_per_source: 5000

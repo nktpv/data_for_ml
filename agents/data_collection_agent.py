@@ -39,6 +39,24 @@ import yaml
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(message)s")
 
+
+def _load_env() -> None:
+    """Load .env from project root (walk up from this file). No-op if dotenv not installed."""
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        return
+    for parent in Path(__file__).resolve().parents:
+        env_file = parent / ".env"
+        if env_file.exists():
+            load_dotenv(env_file, override=False)
+            return
+
+
+def _has_kaggle_creds() -> bool:
+    """Return True only when both KAGGLE_USERNAME and KAGGLE_KEY are set in the environment."""
+    return bool(os.getenv("KAGGLE_USERNAME")) and bool(os.getenv("KAGGLE_KEY"))
+
 SCHEMA = ["text", "label", "source", "collected_at"]
 
 
@@ -71,6 +89,7 @@ class DataCollectionAgent:
     """Collect text data from multiple sources and unify into one DataFrame."""
 
     def __init__(self, config: str | Path = "config.yaml") -> None:
+        _load_env()
         with open(config, encoding="utf-8") as f:
             self.cfg: dict[str, Any] = yaml.safe_load(f)
 
@@ -134,8 +153,19 @@ class DataCollectionAgent:
 
     @staticmethod
     def _validate_kaggle_metadata(name: str) -> bool:
-        """Confirm Kaggle dataset exists and has files — zero download."""
-        import os
+        """Confirm Kaggle dataset exists — zero download.
+
+        dataset_list_files() returns 403 for public datasets in newer Kaggle API
+        versions; gRPC endpoints return 401. Use dataset_list(user=owner) instead:
+        it hits the legacy REST endpoint and reliably confirms existence.
+        """
+        if "/" not in name:
+            return False
+        _load_env()
+        if not _has_kaggle_creds():
+            logger.warning("Kaggle credentials not found — skipping Kaggle source '%s'", name)
+            return False
+        owner, slug = name.split("/", 1)
         try:
             from kaggle.api.kaggle_api_extended import KaggleApi
         except ImportError:
@@ -143,9 +173,9 @@ class DataCollectionAgent:
         try:
             api = KaggleApi()
             api.authenticate()
-            files = api.dataset_list_files(name)
-            return bool(files and files.files)
-        except Exception:
+            results = list(api.dataset_list(search=slug, user=owner))
+            return any(r.ref == name for r in results)
+        except BaseException:
             return False
 
     # ------------------------------------------------------------------
@@ -437,6 +467,12 @@ class DataCollectionAgent:
         limit: int | None,
     ) -> pd.DataFrame:
         import tempfile
+        _load_env()
+        if not _has_kaggle_creds():
+            raise RuntimeError(
+                f"Kaggle credentials not found. Set KAGGLE_USERNAME and KAGGLE_KEY "
+                f"in your .env file or ~/.kaggle/kaggle.json to collect '{name}'."
+            )
         try:
             from kaggle.api.kaggle_api_extended import KaggleApi
         except ImportError as e:
