@@ -210,3 +210,73 @@ result = agent.run(parquet_path="data/labeled/labeled.parquet", task_type="senti
 5. Визуализации: confusion matrix, per-class F1, top features
 6. Сохранение в `models/final_model.pkl` (joblib) + `model_config.json`
 7. Генерация `data/model/MODEL_REPORT.md`
+
+---
+
+## Структура проекта
+
+Ниже — ориентир по каталогам и коду. Крупные артефакты (`*.parquet`, `*.pkl`, многие графики) часто не коммитятся: смотри `.gitignore`. После первого прогона пайплайна появятся `data/**`, `models/final_model.pkl`, `PIPELINE_REPORT.md`.
+
+```
+data_for_ml/
+├── README.md
+├── config.yaml
+├── requirements.txt
+├── PIPELINE_REPORT.md              # итоговый отчёт после полного пайплайна
+│
+├── agents/                         # классы агентов
+│   ├── __init__.py
+│   ├── data_collection_agent.py
+│   ├── data_quality_agent.py
+│   ├── annotation_agent.py
+│   ├── active_learning_agent.py
+│   ├── model_trainer_agent.py
+│   └── openrouter_client.py
+│
+├── scripts/                        # вспомогательные CLI-утилиты (вне скиллов)
+│   ├── run_eda.py
+│   ├── make_quality_notebook.py
+│   └── test_openrouter_client.py
+│
+├── data/                           # данные и отчёты по шагам
+│   ├── raw/                        # combined.parquet, по источникам
+│   ├── cleaned/
+│   ├── labeled/
+│   ├── eda/                        # REPORT.md, графики EDA
+│   ├── detective/                  # QUALITY_REPORT.md, problems.json, графики
+│   ├── annotation/                 # метрики, Label Studio, графики
+│   ├── active_learning/            # REPORT.md, learning_curve.png, history_*.json
+│   └── model/                      # MODEL_REPORT.md, metrics.json, графики
+│
+├── models/                         # final_model.pkl (bundle), model_config.json
+│
+├── notebooks/                      # ноутбуки с результатами по шагам
+│   ├── eda.ipynb
+│   ├── data_quality.ipynb
+│   ├── annotation.ipynb
+│   ├── al_experiment.ipynb
+│   └── model_training.ipynb
+│
+└── .claude/skills/                 # SKILL.md + скрипты для Cursor / Claude Code
+    ├── data-collector/
+    │   ├── SKILL.md
+    │   └── scripts/
+    ├── data-detective/
+    │   ├── SKILL.md
+    │   └── script/                 # detect, fix, compare, visualize, run_notebook
+    ├── data-annotation/
+    │   ├── SKILL.md
+    │   └── scripts/
+    ├── active-learner/
+    │   ├── SKILL.md
+    │   └── scripts/
+    ├── model-trainer/
+    │   ├── SKILL.md
+    │   └── scripts/
+    └── data-pipeline/
+        ├── SKILL.md
+        └── scripts/
+            └── run_pipeline.py     # точка входа «всё сразу» без чата
+```
+
+Локально (не в репозитории): `.env` с ключами, виртуальное окружение (`.venv/`), при необходимости `.claude/settings.local.json`.
