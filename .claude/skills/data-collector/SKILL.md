@@ -87,10 +87,19 @@ D) Use built-in knowledge of well-known public sources.
 
 ### Step 3 — Validate (silent)
 
-For each candidate:
-- Try fetching 5–10 rows
-- Drop any source that fails or returns no usable text
-- If fewer than 2 source **types** survive → search more
+**IMPORTANT: validation must be fast — use metadata-only checks, never download datasets.**
+
+For each candidate by source type:
+
+- **hf_dataset** → call `DataCollectionAgent._validate_hf_metadata(name)` — uses `huggingface_hub.dataset_info()`, zero download. Row count and license come from the HF Hub API (`info.card_data`).
+- **kaggle_dataset** → call `DataCollectionAgent._validate_kaggle_metadata(name)` — uses `api.dataset_list_files()`, zero download.
+- **scrape / api / rss** → one quick HTTP request (3–5 items), confirm it returns text.
+
+**Never call `load_dataset()` or download any files during validation.**
+Full data download happens only in Step 5, after the user selects sources.
+
+Drop any source where validation returns False.
+If fewer than 2 source **types** survive → search more.
 
 ---
 

@@ -10,9 +10,25 @@ Prints a JSON array of dataset descriptors to stdout.
 import json
 import os
 import sys
+from pathlib import Path
+
+
+def _load_env() -> None:
+    """Load .env from project root (walk up from this file)."""
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        return
+    for parent in Path(__file__).resolve().parents:
+        env_file = parent / ".env"
+        if env_file.exists():
+            load_dotenv(env_file, override=False)
+            break
 
 
 def search(query: str, max_results: int = 10) -> list[dict]:
+    _load_env()
+
     try:
         from kaggle.api.kaggle_api_extended import KaggleApi
     except ImportError:
@@ -24,14 +40,18 @@ def search(query: str, max_results: int = 10) -> list[dict]:
         sys.exit(1)
 
     api = KaggleApi()
-    api.authenticate()
+    # Suppress verbose output from Kaggle library
+    import io, contextlib
+    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+        api.authenticate()
 
-    datasets = api.dataset_list(
-        search=query,
-        sort_by="hottest",
-        file_type="csv",
-        max_size=100 * 1024 * 1024,
-    )
+    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+        datasets = api.dataset_list(
+            search=query,
+            sort_by="hottest",
+            file_type="csv",
+            max_size=100 * 1024 * 1024,
+        )
 
     results = []
     for ds in list(datasets)[:max_results]:

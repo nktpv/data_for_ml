@@ -107,11 +107,44 @@ class DataCollectionAgent:
         return combined
 
     def validate(self, spec: dict) -> bool:
-        """Try to fetch a small sample. Return True if source is usable."""
+        """Check if source is usable — metadata-only for HF/Kaggle (no download)."""
         src_type = spec.get("type", "").lower()
+        if src_type == "hf_dataset":
+            return self._validate_hf_metadata(spec["name"])
+        elif src_type == "kaggle_dataset":
+            return self._validate_kaggle_metadata(spec["name"])
+        else:
+            # For scrape/api/rss — quick fetch of a few rows is fine
+            try:
+                df = self._dispatch(src_type, spec, limit=self.validation_n)
+                return df is not None and not df.empty
+            except Exception:
+                return False
+
+    @staticmethod
+    def _validate_hf_metadata(name: str) -> bool:
+        """Confirm dataset exists on HF Hub via API — zero download."""
         try:
-            df = self._dispatch(src_type, spec, limit=self.validation_n)
-            return df is not None and not df.empty
+            from huggingface_hub import dataset_info
+            from huggingface_hub.utils import RepositoryNotFoundError
+            dataset_info(name)
+            return True
+        except Exception:
+            return False
+
+    @staticmethod
+    def _validate_kaggle_metadata(name: str) -> bool:
+        """Confirm Kaggle dataset exists and has files — zero download."""
+        import os
+        try:
+            from kaggle.api.kaggle_api_extended import KaggleApi
+        except ImportError:
+            return False
+        try:
+            api = KaggleApi()
+            api.authenticate()
+            files = api.dataset_list_files(name)
+            return bool(files and files.files)
         except Exception:
             return False
 
@@ -321,11 +354,40 @@ class DataCollectionAgent:
         except ImportError as e:
             raise ImportError("Install datasets: pip install datasets") from e
 
-        ds = hf_load(name, split=split, trust_remote_code=False)
-        ds = ds.shuffle(seed=42)
-        if limit:
-            ds = ds.select(range(min(limit * 2, len(ds))))  # load 2x to allow stratification
-        df = ds.to_pandas()
+        # Use streaming for small limits — avoids downloading the full dataset.
+        # Full download is used only for large collections (> 5000 rows).
+        STREAMING_THRESHOLD = 5000
+        use_streaming = limit is not None and limit <= STREAMING_THRESHOLD
+
+        if use_streaming:
+            ds_stream = hf_load(name, split=split, streaming=True)
+            take_n = min(limit * 2, 10000)  # 2x for stratification headroom
+            rows = list(ds_stream.take(take_n))
+            df = pd.DataFrame(rows)
+            # Feature names for integer label mapping
+            label_names = None
+            if hasattr(ds_stream, "features") and ds_stream.features:
+                feats = ds_stream.features
+                candidate = next(
+                    (c for c in ["label", "category", "class", "target", "sentiment"] if c in feats),
+                    None,
+                )
+                if candidate and hasattr(feats[candidate], "names"):
+                    label_names = {i: v for i, v in enumerate(feats[candidate].names)}
+        else:
+            ds = hf_load(name, split=split)
+            ds = ds.shuffle(seed=42)
+            if limit:
+                ds = ds.select(range(min(limit * 2, len(ds))))
+            df = ds.to_pandas()
+            label_names = None
+            if hasattr(ds, "features"):
+                candidate = next(
+                    (c for c in ["label", "category", "class", "target", "sentiment"] if c in ds.features),
+                    None,
+                )
+                if candidate and hasattr(ds.features[candidate], "names"):
+                    label_names = {i: v for i, v in enumerate(ds.features[candidate].names)}
 
         text_col = text_col or self._detect_col(df, ["text", "sentence", "content", "review", "article", "body"])
         label_col = label_col or self._detect_col(df, ["label", "category", "class", "target", "sentiment"])
@@ -334,12 +396,9 @@ class DataCollectionAgent:
         result["text"] = df[text_col]
         result["label"] = df[label_col].astype(str) if label_col else None
 
-        # Map integer labels using ds.features if available
-        if label_col and hasattr(ds, "features") and label_col in ds.features:
-            feature = ds.features[label_col]
-            if hasattr(feature, "names"):
-                label_map = {i: v for i, v in enumerate(feature.names)}
-                result["label"] = df[label_col].map(label_map)
+        # Map integer labels to string names when available
+        if label_col and label_names:
+            result["label"] = df[label_col].map(label_names)
 
         # Stratified sampling: equal rows per class (when labels exist and limit set)
         if limit and label_col and result["label"].notna().any():
@@ -386,12 +445,14 @@ class DataCollectionAgent:
         api = KaggleApi()
         api.authenticate()
 
+        # Kaggle always requires downloading the zip, but we read only `limit` rows.
+        # For large limits, download once and read fully; for small limits, nrows caps it.
         with tempfile.TemporaryDirectory() as tmpdir:
             api.dataset_download_files(name, path=tmpdir, unzip=True)
-            csvs = list(Path(tmpdir).glob("**/*.csv"))
+            csvs = sorted(Path(tmpdir).glob("**/*.csv"), key=lambda p: p.stat().st_size, reverse=True)
             if not csvs:
                 raise FileNotFoundError(f"No CSV files found in Kaggle dataset '{name}'")
-            df = pd.read_csv(csvs[0], nrows=limit)
+            df = pd.read_csv(csvs[0], nrows=limit)  # nrows=None reads all
 
         text_col = text_col or self._detect_col(df, ["text", "sentence", "content", "review", "article"])
         label_col = label_col or self._detect_col(df, ["label", "category", "class", "target"])
