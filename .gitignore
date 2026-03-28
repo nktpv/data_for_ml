@@ -1,0 +1,75 @@
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.python-version
+
+
+# Data files
+datasets/
+*.csv
+*.parquet
+*.jsonl
+*.json
+*.tsv
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+*.npy
+*.npz
+*.feather
+*.arrow
+
+# Models & checkpoints
+
+checkpoints/
+*.bin
+*.pt
+*.pth
+*.onnx
+*.safetensors
+
+# Logs & outputs
+logs/
+output/
+outputs/
+results/
+*.log
+
+# ML experiment tracking
+mlruns/
+wandb/
+.neptune/
+
+# Kaggle
+kaggle.json
+*.zip
+
+# HuggingFace cache
+~/.cache/huggingface/
+.cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

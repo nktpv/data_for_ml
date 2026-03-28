@@ -1,0 +1,38 @@
+{
+  "total_rows": 5017,
+  "missing": {},
+  "duplicates": 0,
+  "near_duplicates": 0,
+  "length_outliers": 356,
+  "length_stats": {
+    "mean": 1387.7,
+    "median": 973.0,
+    "min": 52,
+    "max": 55689,
+    "std": 1795.0,
+    "q1": 703.0,
+    "q3": 1620.0
+  },
+  "empty_texts": 0,
+  "inconsistent_labels": [
+    [
+      "0",
+      "neg"
+    ],
+    [
+      "1",
+      "pos"
+    ]
+  ],
+  "encoding_issues": 2938,
+  "class_distribution": {
+    "0": 2500,
+    "1": 2496
+  },
+  "imbalance_ratio": 1.0016,
+  "short_texts": 0,
+  "long_texts": 70,
+  "iqr_lower": -672.5,
+  "iqr_upper": 2995.5,
+  "extra": {}
+}

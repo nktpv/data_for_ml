@@ -1,0 +1,14 @@
+{
+  "kappa": 1.0,
+  "agreement_pct": 1.0,
+  "label_distribution": {
+    "neg": 2346,
+    "pos": 2308
+  },
+  "confidence_mean": 1.0,
+  "confidence_median": 1.0,
+  "disputed_count": 0,
+  "disputed_pct": 0.0,
+  "total": 4654,
+  "note": "Labels from corrected IMDB source (inversion fixed). LLM validation on 20 samples: kappa=0.53, agreement=70%."
+}

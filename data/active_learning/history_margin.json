@@ -1,0 +1,38 @@
+[
+  {
+    "iteration": 0,
+    "n_labeled": 20,
+    "accuracy": 0.5435,
+    "f1": 0.532
+  },
+  {
+    "iteration": 1,
+    "n_labeled": 40,
+    "accuracy": 0.5038,
+    "f1": 0.335
+  },
+  {
+    "iteration": 2,
+    "n_labeled": 60,
+    "accuracy": 0.5081,
+    "f1": 0.3723
+  },
+  {
+    "iteration": 3,
+    "n_labeled": 80,
+    "accuracy": 0.5639,
+    "f1": 0.4867
+  },
+  {
+    "iteration": 4,
+    "n_labeled": 100,
+    "accuracy": 0.6198,
+    "f1": 0.6012
+  },
+  {
+    "iteration": 5,
+    "n_labeled": 120,
+    "accuracy": 0.6112,
+    "f1": 0.574
+  }
+]
